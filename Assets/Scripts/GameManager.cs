@@ -14,7 +14,7 @@ using Newtonsoft.Json.Serialization;
 using Unity.VisualScripting;
 using TankDemo;
 
-public class GameManager : MonoBehaviour
+public class GameManager : MonoBehaviour, IObserver
 {
     public static GameManager instance;
     public AudioSource audiosource;
@@ -72,38 +72,6 @@ public class GameManager : MonoBehaviour
     private AudioClip equipaudio;
     [SerializeField]
     private AudioClip equipoffaudio;
-    [SerializeField]
-    private Camera maincam;
-    [SerializeField]
-    private Transform maincampos;
-    [SerializeField]
-    private Transform maincamcloseuppos;
-    [SerializeField]
-    private GameObject sidemenu;
-    [SerializeField]
-    private Transform sidemenupos;
-    [SerializeField]
-    private Transform sidemenumovepos;
-    [SerializeField]
-    private GameObject upgrademenu;
-    [SerializeField]
-    private Transform upgrademenupos;
-    [SerializeField]
-    private Transform upgrademenumovepos;
-    [SerializeField]
-    private GameObject colormenu;
-    [SerializeField]
-    private Transform bottommenupos;
-    [SerializeField]
-    private Transform bottommenumovepos;
-    [SerializeField]
-    private GameObject bottommenu;
-    [SerializeField]
-    private Transform battlemenupos;
-    [SerializeField]
-    private Transform battlemenumovepos;
-    [SerializeField]
-    private GameObject battlemenu;
 
     [Header("Upgrade Properties")]
     public Slider[] Upgrades;
@@ -132,8 +100,9 @@ public class GameManager : MonoBehaviour
     float plusreload = -0.05f;
     float plusrange = 1f;
 
-    [Header("Color Properties")]
-    public GameObject colorDetail;
+    [Header("Color Picker")]
+    [SerializeField]
+    private ColorPicker colorPicker;
 
     [Header("InventoryNShop Properties")]
     public GameObject invenui;
@@ -165,6 +134,7 @@ public class GameManager : MonoBehaviour
     public AudioClip TimerSound;
     public AudioClip HealSound;
     public AudioClip GuidedSound;
+
 
     //버튼 매개변수
     private int uptype;
@@ -244,6 +214,9 @@ public class GameManager : MonoBehaviour
             player = GameObject.FindWithTag("Player");
             tankhealth = player.GetComponent<Tank_Health>();
         }
+
+        colorPicker.ResisterObserver(this);
+
     }
 
     private void Start()
@@ -532,52 +505,6 @@ public class GameManager : MonoBehaviour
         ButtonAudio();
         SceneManager.LoadScene("Main");
     }
-    public void ButtonUpgrade()
-    {
-        ButtonAudio();
-
-        StopmenuCo();
-        StartCoroutine("BottomMenuMove");
-        StartCoroutine("BattleMenuMove");
-        StartCoroutine("CameraCloseUp");
-        StartCoroutine("SideMenuMove");
-        StartCoroutine("UpgradeMenuMove");
-    }
-    public void ButtonUpgradeReturn()
-    {
-        ButtonAudio();
-
-        StopmenuCo();
-        StartCoroutine("BottomMenuReturn");
-        StartCoroutine("BattleMenuReturn");
-        StartCoroutine("CameraReturn");
-        StartCoroutine("SideMenuReturn");
-        StartCoroutine("UpgradeMenuReturn");
-        SaveUserData();
-    }
-
-    public void ButtonColor()
-    {
-        ButtonAudio();
-
-        StopmenuCo();
-        StartCoroutine("BottomMenuMove");
-        StartCoroutine("BattleMenuMove");
-        StartCoroutine("CameraCloseUp");
-        StartCoroutine("SideMenuMove");
-        StartCoroutine("ColorMenuMove");
-    }
-    public void ButtonColorReturn()
-    {
-        StopmenuCo();
-        ColorOK();
-        StartCoroutine("BottomMenuReturn");
-        StartCoroutine("BattleMenuReturn");
-        StartCoroutine("CameraReturn");
-        StartCoroutine("SideMenuReturn");
-        StartCoroutine("ColorMenuReturn");
-        SaveUserData();
-    }
 
     //컬러관련
     public void ColorOK()
@@ -586,48 +513,21 @@ public class GameManager : MonoBehaviour
         T_Mat.color = T_Color;
     }
 
-    public void ColorChange()
+    public void ColorChange(Color color)
     {
         ButtonAudio();
         if (gem < 5)
         {
-            colorDetail.SetActive(false);
             WarningPopUp.SetActive(true);
             WariningText.text = "보석이 부족합니다!";
             return;
         }
         gem -= 5;
         gemtext.text = gem.ToString();
-        T_Mat.color = ColorPicker.Instance.linkedObject.color;
-        T_Color = ColorPicker.Instance.linkedObject.color;
+        T_Mat.color = color;
+        T_Color = color;       
         Color.RGBToHSV(T_Color, out H, out S, out V);
         SaveUserData();
-        Debug.Log(userData.H_value * 360 + " " + userData.S_value * 100 + " " + userData.V_value * 100);
-        colorDetail.SetActive(false);
-
-    }
-
-    public void whenchangeButtonPush()
-    {
-        ButtonAudio();
-        colorDetail.SetActive(true);
-    }
-    void StopmenuCo()
-    {
-        StopCoroutine("CameraReturn");
-        StopCoroutine("SideMenuReturn");
-        StopCoroutine("ColorMenuReturn");
-        StopCoroutine("UpgradeMenuReturn");
-        StopCoroutine("CameraCloseUp");
-        StopCoroutine("SideMenuMove");
-        StopCoroutine("ColorMenuMove");
-        StopCoroutine("UpgradeMenuReturn");
-        StopCoroutine("ColorMenuReturn");
-        StopCoroutine("UpgradeMenuMove");
-        StopCoroutine("BottomMenuMove");
-        StopCoroutine("BottomMenuReturn");
-        StopCoroutine("BattleMenuMove");
-        StopCoroutine("BattleMenuReturn");
     }
     //업그레이드 관련
     public void UpgradeResetWarning()
@@ -712,7 +612,6 @@ public class GameManager : MonoBehaviour
     {
         ButtonAudio();
         upgradeDetail.SetActive(false);
-        colorDetail.SetActive(false);
         WarningPopUp.SetActive(false);
         ResetPopUp.SetActive(false);
     }
@@ -782,119 +681,6 @@ public class GameManager : MonoBehaviour
         ButtonAudio();
         shopui.SetActive(ox);
     }
-    IEnumerator CameraCloseUp()
-    {
-        while (Vector3.Distance(maincam.transform.position, maincamcloseuppos.position) > 0.001f)
-        {
-            maincam.transform.position = Vector3.Slerp(maincam.transform.position, maincamcloseuppos.position, 3f*Time.deltaTime);
-            maincam.transform.rotation = Quaternion.Slerp(maincam.transform.rotation, maincamcloseuppos.rotation, 3f*Time.deltaTime);
-            yield return null;
-        }
-    }
-
-    IEnumerator CameraReturn()
-    {
-        while (Vector3.Distance(maincam.transform.position, maincampos.position) > 0.001f)
-        {
-            maincam.transform.position = Vector3.Slerp(maincam.transform.position, maincampos.position, 3f * Time.deltaTime);
-            maincam.transform.rotation = Quaternion.Slerp(maincam.transform.rotation, maincampos.rotation, 3f * Time.deltaTime);
-            yield return null;
-        }
-    }
-
-    IEnumerator SideMenuMove()
-    {
-        while (Vector3.Distance(sidemenu.transform.position, sidemenumovepos.position) > 0.001f)
-        {
-            sidemenu.transform.position = Vector3.Lerp(sidemenu.transform.position, sidemenumovepos.position, 3f * Time.deltaTime);
-            yield return null;
-        }
-    }
-
-    IEnumerator SideMenuReturn()
-    {
-        Debug.Log("OK");
-        while (Vector3.Distance(sidemenu.transform.position, sidemenupos.position) > 0.001f)
-        {
-            sidemenu.transform.position = Vector3.Lerp(sidemenu.transform.position, sidemenupos.position, 3f * Time.deltaTime);
-            yield return null;
-        }
-    }
-
-    IEnumerator UpgradeMenuMove()
-    {
-        while (Vector3.Distance(upgrademenu.transform.position, upgrademenumovepos.position) > 0.001f)
-        {
-            upgrademenu.transform.position = Vector3.Lerp(upgrademenu.transform.position, upgrademenumovepos.position, 3f * Time.deltaTime);
-            yield return null;
-        }
-    }
-
-    IEnumerator UpgradeMenuReturn()
-    {
-        while (Vector3.Distance(upgrademenu.transform.position, upgrademenupos.position) > 0.001f)
-        {
-            upgrademenu.transform.position = Vector3.Lerp(upgrademenu.transform.position, upgrademenupos.position, 3f * Time.deltaTime);
-            yield return null;
-        }
-    }
-
-    IEnumerator ColorMenuMove()
-    {
-        while (Vector3.Distance(colormenu.transform.position, upgrademenumovepos.position) > 0.001f)
-        {
-            colormenu.transform.position = Vector3.Lerp(colormenu.transform.position, upgrademenumovepos.position, 3f * Time.deltaTime);
-            yield return null;
-        }
-    }
-
-    IEnumerator ColorMenuReturn()
-    {
-        while (Vector3.Distance(colormenu.transform.position, upgrademenupos.position) > 0.001f)
-        {
-            colormenu.transform.position = Vector3.Lerp(colormenu.transform.position, upgrademenupos.position, 3f * Time.deltaTime);
-            yield return null;
-
-        }
-    }
-
-    IEnumerator BottomMenuMove()
-    {
-        while (Vector3.Distance(bottommenu.transform.position, bottommenumovepos.position) > 0.001f)
-        {
-            bottommenu.transform.position = Vector3.Lerp(bottommenu.transform.position, bottommenumovepos.position, 3f * Time.deltaTime);
-            yield return null;
-
-        }
-    }
-
-    IEnumerator BottomMenuReturn()
-    {
-        while (Vector3.Distance(bottommenu.transform.position, bottommenupos.position) > 0.001f)
-        {
-            bottommenu.transform.position = Vector3.Lerp(bottommenu.transform.position, bottommenupos.position, 3f * Time.deltaTime);
-            yield return null;
-        }
-    }
-
-    IEnumerator BattleMenuMove()
-    {
-        while (Vector3.Distance(battlemenu.transform.position, battlemenumovepos.position) > 0.001f)
-        {
-            battlemenu.transform.position = Vector3.Lerp(battlemenu.transform.position, battlemenumovepos.position, 3f * Time.deltaTime);
-            yield return null;
-
-        }
-    }
-
-    IEnumerator BattleMenuReturn()
-    {
-        while (Vector3.Distance(battlemenu.transform.position, battlemenupos.position) > 0.001f)
-        {
-            battlemenu.transform.position = Vector3.Lerp(battlemenu.transform.position, battlemenupos.position, 3f * Time.deltaTime);
-            yield return null;
-        }
-    }
     #endregion
 
     #region Consumable Methods
@@ -903,9 +689,15 @@ public class GameManager : MonoBehaviour
     {
         tankhealth.TankHealing(amount);
     }
-
-
     #endregion
+
+    #region Interface Methods
+    public void UpdateData()
+    {
+        ColorChange(colorPicker.linkedObject.color);
+    }
+    #endregion
+
     #endregion
 }
 

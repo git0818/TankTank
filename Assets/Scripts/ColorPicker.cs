@@ -3,24 +3,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
-using Unity.VisualScripting;
+using System;
 
-public class ColorPicker : MonoBehaviour
+public class ColorPicker : MonoBehaviour, ISubject
 {
-    private static ColorPicker instance = null;
-    public static ColorPicker Instance
-    {
-        get
-        {
-            if(null == instance) instance = FindObjectOfType<ColorPicker>();
-            return instance;
-        }
-    }
+    private List<IObserver> observersList = new List<IObserver>();
 
     private Vector2 sizeOfPalette;
     private CircleCollider2D paletteCollider;
     private GraphicRaycaster graphicRaycaster;
-
     [SerializeField]
     private Image circlePalette;
     [SerializeField]
@@ -31,14 +22,14 @@ public class ColorPicker : MonoBehaviour
     private Slider S_Slider;
     [SerializeField]
     private Slider V_Slider;
+    [SerializeField]
+    private GameObject colorPopUp;
 
     public Material linkedObject;
     #region Builtin Methods
     private void Awake()
     {
-        if (null == instance) instance = this;
         graphicRaycaster = canvas.GetComponent<GraphicRaycaster>();
-
     }
     void Start()
     {
@@ -73,6 +64,12 @@ public class ColorPicker : MonoBehaviour
 
 
     #region Custom Methods
+
+    //버튼에 연결됨
+    public void ChangeButtonClick(bool onoff)
+    {
+        colorPopUp.SetActive(onoff);
+    }
     private void selectColor()
     {
         Vector3 touchPosition = Input.GetTouch(0).position;
@@ -112,6 +109,25 @@ public class ColorPicker : MonoBehaviour
         float H, S, V;
         Color.RGBToHSV(color, out H, out S, out V);
         linkedObject.color = Color.HSVToRGB(H, S_Slider.value / 100, V_Slider.value / 100);
+    }
+
+    public void ResisterObserver(IObserver observer)
+    {
+        observersList.Add(observer);
+    }
+
+    public void RemoveObserver(IObserver observer)
+    {
+        observersList.Remove(observer);
+    }
+
+    public void NotifyObservers()
+    {
+        ChangeButtonClick(false);
+        foreach(IObserver observer in observersList)
+        {
+            observer.UpdateData();
+        }
     }
 
     #endregion
