@@ -17,28 +17,31 @@ public class ColorPicker : MonoBehaviour
         }
     }
 
-    public Image circlePalette;
-    public Image picker;
-    public Color selectedColor;
     private Vector2 sizeOfPalette;
     private CircleCollider2D paletteCollider;
-    public Material linkedObject;
-    private GraphicRaycaster gr;
-    public Canvas canvas;
-    public Slider S_Slider;
-    public Slider V_Slider;
+    private GraphicRaycaster graphicRaycaster;
 
+    [SerializeField]
+    private Image circlePalette;
+    [SerializeField]
+    private Image picker;
+    [SerializeField]
+    private Canvas canvas;
+    [SerializeField]
+    private Slider S_Slider;
+    [SerializeField]
+    private Slider V_Slider;
+
+    public Material linkedObject;
     #region Builtin Methods
     private void Awake()
     {
         if (null == instance) instance = this;
-        gr = canvas.GetComponent<GraphicRaycaster>();
+        graphicRaycaster = canvas.GetComponent<GraphicRaycaster>();
 
     }
     void Start()
     {
-        //float H, S, V;
-        //Color.RGBToHSV(linkedObject.color, out H, out S, out V);
         S_Slider.value = Mathf.Round(GameManager.instance.S * 100);
         V_Slider.value = Mathf.Round(GameManager.instance.V * 100);
         paletteCollider = circlePalette.GetComponent<CircleCollider2D>();
@@ -55,7 +58,7 @@ public class ColorPicker : MonoBehaviour
                 var ped = new PointerEventData(null);
                 ped.position = Input.GetTouch(0).position;
                 List<RaycastResult> hit = new List<RaycastResult>();
-                gr.Raycast(ped, hit);
+                graphicRaycaster.Raycast(ped, hit);
                 if (hit.Count <= 0)
                     return;
                 else if (hit[0].gameObject.tag == "Color")
@@ -72,17 +75,13 @@ public class ColorPicker : MonoBehaviour
     #region Custom Methods
     private void selectColor()
     {
-        Vector3 touchpos = Input.GetTouch(0).position;
-        Vector3 offset = touchpos - transform.position;
-        Vector3 diff = Vector3.ClampMagnitude(offset, paletteCollider.radius);
+        Vector3 touchPosition = Input.GetTouch(0).position;
+        Vector3 offset = touchPosition - transform.position;
+        Vector3 distance = Vector3.ClampMagnitude(offset, paletteCollider.radius);
 
-        picker.transform.position = transform.position + diff;
+        picker.transform.position = transform.position + distance;
 
-        selectedColor = getColor();
-        Color temp = selectedColor;
-        float H, S, V;
-        Color.RGBToHSV(temp, out H, out S, out V);
-        linkedObject.color = Color.HSVToRGB(H, S_Slider.value / 100, V_Slider.value / 100);
+        ColorChangeHSV(getColor());
     }
 
     private Color getColor()
@@ -100,11 +99,19 @@ public class ColorPicker : MonoBehaviour
         return circularSelectedColor;
     }
 
-    public void HSV_SV()
+    //명도,채도 슬라이더에서 사용중이니까 지우면 안됨
+    public void ColorChangeHSV()
     {
         float H, S, V;
         Color.RGBToHSV(linkedObject.color, out H, out S, out V);
         linkedObject.color = Color.HSVToRGB(H, S_Slider.value/100, V_Slider.value/100);
+    }
+    
+    private void ColorChangeHSV(Color color)
+    {
+        float H, S, V;
+        Color.RGBToHSV(color, out H, out S, out V);
+        linkedObject.color = Color.HSVToRGB(H, S_Slider.value / 100, V_Slider.value / 100);
     }
 
     #endregion
